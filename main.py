@@ -1,8 +1,9 @@
 import cv2
 import time
 import autopy
+import math
+import numpy as np 
 import mediapipe as mp
-
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
@@ -32,7 +33,16 @@ HAND_CONNECTIONS = [
 
 # ------------------ Variables ------------------
 cap = cv2.VideoCapture(0)
+wcam = 640
+hcam = 480
+cap.set(3, wcam)
+cap.set(4, hcam)
 p_time = 0
+wscn , hscn = autopy.screen.size()
+frameR= 150
+smoothness = 11
+cLocX, cLocY = 0, 0
+pLocX, pLocY = 0, 0
 
 
 # ------------------ Main Loop ------------------
@@ -54,9 +64,18 @@ while True:
         for hands in result.hand_landmarks:
             h, w, _ = img.shape
             lm_list = []
+            x_list = []
+            y_list = []
 
             for lm in hands:
                 lm_list.append((int(lm.x * w), int(lm.y * h)))
+                x_list.append(int(lm.x*w))
+                y_list.append(int(lm.y*h))
+
+            xmin, xmax = min(x_list), max(x_list)
+            ymin, ymax = min(y_list), max(y_list)
+            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+
 
             # Draw connections
             for start, end in HAND_CONNECTIONS:
@@ -66,11 +85,13 @@ while True:
             for x, y in lm_list:
                 cv2.circle(img, (x, y), 4, (0, 0, 255), cv2.FILLED)
 
+
             x1, y1 = lm_list[8][0], lm_list[8][1]
             x2, y2 = lm_list[12][0], lm_list[12][1]
             x3, y3 = (x2+x1)//2, (y2+y1)//2
 
-            x4 = np.interp(x1, (0, wcam))
+            x4 = np.interp(x1, (frameR, wcam-frameR), (0, wscn))
+            y4 = np.interp(y1, (frameR, hcam-frameR), (0, hscn))
 
             if lm_list[4][0] < lm_list[3][0]:
                 finger_count += 1
@@ -88,6 +109,7 @@ while True:
                 else:
                     finger.append(0)
             
+            
             # print(finger_count)
             # print(finger)
 
@@ -95,12 +117,28 @@ while True:
                 print("Left Click")
                 cv2.circle(img, (x3, y3), 15, (0, 0, 255), cv2.FILLED)
                 cv2.putText(img, "Left Click", (20, 80), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), 2)
+                # length, img, _ = detector.findDistance(8, 12, img)
+                length = math.hypot(x2 - x1, y2 - y1)
+                print(length)
+                if length < 100:
+                    autopy.mouse.click()
+
+
 
             if finger[1] and not finger[2]:
                 print("Move")
-                autopy.mouse.move(x1, y1)
+                cv2.rectangle(img, (frameR, frameR),
+                             (wcam-frameR, hcam-frameR),
+                             (255, 0, 255), 2)
                 cv2.circle(img, (x1, y1), 15, (0, 255, 0), cv2.FILLED)
                 cv2.putText(img, "Move the curser", (20, 80), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), 2)
+                
+                cLocX = pLocX + (x4 - pLocX) / smoothness
+                cLocY = pLocY + (y4 - pLocY) / smoothness
+                
+                autopy.mouse.move(wscn-cLocX, cLocY)
+
+                pLocX, pLocY = cLocX, cLocY
 
     # ------------------ FPS ------------------
     c_time = time.time()
