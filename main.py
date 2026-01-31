@@ -40,7 +40,7 @@ cap.set(4, hcam)
 p_time = 0
 wscn , hscn = autopy.screen.size()
 frameR= 150
-smoothness = 11
+smoothness = 10
 cLocX, cLocY = 0, 0
 pLocX, pLocY = 0, 0
 
