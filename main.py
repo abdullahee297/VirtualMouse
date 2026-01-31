@@ -117,9 +117,8 @@ while True:
                 print("Left Click")
                 cv2.circle(img, (x3, y3), 15, (0, 0, 255), cv2.FILLED)
                 cv2.putText(img, "Left Click", (20, 80), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), 2)
-                # length, img, _ = detector.findDistance(8, 12, img)
                 length = math.hypot(x2 - x1, y2 - y1)
-                print(length)
+                # print(length)
                 if length < 100:
                     autopy.mouse.click()
 
